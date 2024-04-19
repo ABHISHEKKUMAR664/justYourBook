@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { useEffect, useRef, useState } from "react";
 import * as esbuild from "esbuild-wasm";
 import { unpkgPathPlugin } from "./plugins/unpkg-path-plugin";
+import { fetchPlugin } from "./plugins/fetch-plugin";
 
 const App = () => {
     const ref = useRef<any>();
@@ -16,30 +17,34 @@ const App = () => {
         });
         ref.current = service;
         console.log(ref.current);
-
     };
+
+
     useEffect(() => {
         startService();
     }, []);
+
+
 
     const onClick = async () => {
         if (!ref.current) {
             return;
         }
-        // const result= await ref.current.build(input,{
-        //     loader: 'jsx',  //tell esbuild what kind of code we poviding it
-        //     target: 'es2015', //use for transpiling process which handle js advance syntax like asyn,await, spread syntax inside an object
-        // })
         const result = await ref.current.build({
-            entryPoints: ['index.js'],
+            entryPoints: ["index.js"],
             bundle: true,
             write: false,
-            plugins: [unpkgPathPlugin()]
-
-        })
-        setCode(result.outputFiles[0].text)
-        console.log(result)
+            plugins: [unpkgPathPlugin(), fetchPlugin(input)],
+            // define: {
+            //     'process.env.NODE_ENV:"production"',
+            //     global: 'window',
+            // },
+        });
+        setCode(result.outputFiles[0].text);
+        console.log(result);
     };
+
+
 
     return (
         <div>
@@ -52,7 +57,9 @@ const App = () => {
     );
 };
 
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+const root = ReactDOM.createRoot(
+    document.getElementById("root") as HTMLElement
+);
 root.render(
     <React.StrictMode>
         <App />

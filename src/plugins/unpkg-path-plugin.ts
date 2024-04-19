@@ -2,19 +2,21 @@ import * as esbuild from "esbuild-wasm";
 import axios from "axios";
 import localforage from "localforage";
 
-const fileCache= localforage.createInstance({
-    name:'fileCache',
-});
+// const fileCache= localforage.createInstance({
+//     name:'fileCache',
+// });
 
 
-export const unpkgPathPlugin = (inputResult:string) => {
+export const unpkgPathPlugin = () => {
   return {
     name: "unpkg-path-plugin",
     setup(build: esbuild.PluginBuild) {
+
       //handle root entry file of 'index.js'
       build.onResolve({filter:/(^index\.js$)/},()=>{
         return{path: 'index.js',namespace:'a'}
       })
+
       // handle relative path in a module
      build.onResolve({filter:/^\.+\//},(args:any)=>{
        return {
@@ -30,7 +32,7 @@ export const unpkgPathPlugin = (inputResult:string) => {
       })
 
       // build.onResolve({ filter: /.*/ }, async (args: any) => {
-      //   
+      //   console.log("onResole", args);
       //   if (args.path === "index.js") {
       //     return { path: args.path, namespace: "a" };
       //   }
@@ -47,38 +49,6 @@ export const unpkgPathPlugin = (inputResult:string) => {
         
       // });
 
-      build.onLoad({ filter: /.*/ }, async (args: any) => {
-        console.log("onLoad", args);
-
-        if (args.path === "index.js") {
-          return {
-            loader: "jsx",
-            contents: `
-             import {react,useState} from 'react';
-              console.log(react, reactDOM);
-            `,
-          };
-        }
-
-        const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(args.path);
-        //if it is, return it immeditly
-        if(cachedResult){
-            return cachedResult
-        }
-
-        const { data ,request} = await axios.get(args.path);
-        // console.log(request)
-        const result ={
-             loader: "jsx",
-          contents: data,
-          resolveDir:new URL('./',request.responseURL).pathname,
-        }
-       
-        //store response in cache
-        await fileCache.setItem(args.path, result)
-
-        
-      });
-    },
+          },
   };
 };
