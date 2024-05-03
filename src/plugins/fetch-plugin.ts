@@ -19,25 +19,29 @@ export const fetchPlugin = (inputCode: string) => {
           loader: "jsx",
           contents: inputCode,
         };
-       });
+      });
+    
 
+     build.onLoad({filter:/.*/},async(args:any)=>{
+       const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(args.path);
+       if (cachedResult) {
+        return cachedResult
+       }
+
+      })
 
       //2.   
-      build.onLoad({filter:/.css$/},async(args:any)=>{
+      build.onLoad({ filter: /.css$/ }, async (args: any) => {
 
-         const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(args.path); 
-         if(cachedResult){
-             return cachedResult
-         }
+    
+        const { data, request } = await axios.get(args.path);
+        const escaped = data
+          .replace(/\n/g, '')
+          .replace(/"/g, '\\"')
+          .replace(/'/g, "\\'");
 
-         const { data, request } = await axios.get(args.path);
-         const escaped=data
-             .replace(/\n/g,'')
-             .replace(/"/g,'\\"')
-             .replace(/'/g,"\\'");
 
-         
-         const contents = 
+        const contents =
           `
          const style=document.createElement('style');
          style.innerText= 'body{background-color:"red"}';
@@ -45,38 +49,34 @@ export const fetchPlugin = (inputCode: string) => {
          document.head.appendChild(style);
          `
 
-         const result: esbuild.OnLoadResult = {
+        const result: esbuild.OnLoadResult = {
           loader: 'jsx',
           contents,
           resolveDir: new URL('./', request.responseURL).pathname,
-         }
-          //store response in cache
-          await fileCache.setItem(args.path, result);
-          return result;
-         });
+        }
+        //store response in cache
+        await fileCache.setItem(args.path, result);
+        return result;
+      });
 
 
-       //3.
-       build.onLoad({ filter: /.*/ }, async (args: any) => {
-
-          const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(args.path); 
-           if(cachedResult){
-              return cachedResult
-          }
-
-          const { data, request } = await axios.get(args.path);
-
-         const result: esbuild.OnLoadResult = {
-          loader: 'jsx',
-          contents:data,
-          resolveDir: new URL('./', request.responseURL).pathname,
-         }
-         //store response in cache
-         await fileCache.setItem(args.path, result);
-          return result;
-         });
+      //3.
+      build.onLoad({ filter: /.*/ }, async (args: any) => {
 
        
+        const { data, request } = await axios.get(args.path);
+
+        const result: esbuild.OnLoadResult = {
+          loader: 'jsx',
+          contents: data,
+          resolveDir: new URL('./', request.responseURL).pathname,
         }
+        //store response in cache
+        await fileCache.setItem(args.path, result);
+        return result;
+      });
+
+
     }
+  }
 }
